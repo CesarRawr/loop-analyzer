@@ -38,7 +38,7 @@ func GetMac() (string, error) {
 
 // Obtener la configuración del archivo de configuración
 func GetConfig() (*models.Config, error) {
-  content, err := ioutil.ReadFile("./config.json")
+  content, err := ioutil.ReadFile("config.json")
   if err != nil {
     return nil, err
   }
@@ -55,7 +55,7 @@ func GetConfig() (*models.Config, error) {
 // Guardar configuración
 func SaveConfig(data *models.Config) error {
   file, _ := json.MarshalIndent(data, "", " ")
-  err := ioutil.WriteFile("test.json", file, 0644)
+  err := ioutil.WriteFile("config.json", file, 0644)
   if err != nil {
     return err
   }
