@@ -41,7 +41,7 @@ func Read(db *badger.DB, id string) (*models.Log, error) {
   return &p, nil
 }
 
-func Update(db *badger.DB, id string, data models.Log) error {
+func Update(db *badger.DB, data *models.Log) error {
   tx := db.NewTransaction(true)
   defer tx.Discard()
 
@@ -53,7 +53,7 @@ func Update(db *badger.DB, id string, data models.Log) error {
 
   // Guardar el slice de bytes como valor de la clave correspondiente
   // en la base de datos Badger
-  key := []byte(fmt.Sprintf(id))
+  key := []byte(fmt.Sprintf(data.ID))
   err = tx.Set(key, bytes)
   if err != nil {
     return err

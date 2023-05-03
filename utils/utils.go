@@ -7,7 +7,13 @@ import (
   "io/ioutil"
   "encoding/json"
   "analyzer/models"
+  badger "github.com/dgraph-io/badger/v4"
 )
+
+func CloseAll(db *badger.DB, stop *chan bool) {
+  *stop <- true
+  db.Close()
+}
 
 // Obtener el hostname
 func GetHostname() (*string, error) {

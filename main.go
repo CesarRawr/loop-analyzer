@@ -1,32 +1,48 @@
 package main
 
 import (
+  "os"
   "log"
   "fmt"
   "time"
+  "syscall"
+  "os/signal"
   "analyzer/models"
   "analyzer/controller"
   "analyzer/utils"
   badger "github.com/dgraph-io/badger/v4"
 )
 
-func clock() {
-  tdr := time.Tick(1 * time.Second)
-  for actualHour := range tdr {
-    fmt.Println(actualHour)
+func clock(db *badger.DB, initialLog *models.Log, stop *chan bool) {
+  tdr := time.Tick(5 * time.Second)
+  for {
+    select {
+    case <-*stop:
+      return
+    case actualDate := <-tdr:
+      initialLog.EndDate = actualDate.Format(time.RFC3339)
+      controller.Update(db, initialLog)
+    }
   }
 }
 
-func show(db *badger.DB, id string) {
-  oldLog, err := controller.Read(db, id)
-  if err != nil {
-    log.Fatal(err)
+func signalListener(signalChannel *chan os.Signal, db *badger.DB, stop *chan bool) {
+  sig := <-*signalChannel
+  switch sig {
+  case os.Interrupt:
+    fmt.Println("SIGINT Signal")
+    utils.CloseAll(db, stop)
+  case syscall.SIGTERM:
+    fmt.Println("SIGTERM Signal")
+    utils.CloseAll(db, stop)
   }
-  
-  fmt.Println(*oldLog)
 }
 
 func main() {
+  stop := make(chan bool)
+  signalChannel := make(chan os.Signal, 2)
+  signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
+
   // Se abre la base de datos
   db, err := badger.Open(badger.DefaultOptions("./.data"))
   if err != nil {
@@ -40,6 +56,7 @@ func main() {
     log.Fatal(err)
   }
 
+  // Actualizar ID del run actual
   config.ActualID++
   err = utils.SaveConfig(config);
   if err != nil {
@@ -60,16 +77,14 @@ func main() {
 
   // log unique id
   logID := fmt.Sprintf("%d_%s", config.ActualID, *hostname)
-
-  fmt.Println(logID)
-  fmt.Println(*hostname)
-  fmt.Println(mac)
-
+  // Nuevo log creado
   initialLog := models.Log{
     ID: logID,
     MAC: mac,
+    StartDate: time.Now().Format(time.RFC3339),
   }
 
-  fmt.Println(initialLog)
-  controller.PrintAllLogs(db)
+  go signalListener(&signalChannel, db, &stop)
+  go clock(db, &initialLog, &stop)
+  <-stop
 }
