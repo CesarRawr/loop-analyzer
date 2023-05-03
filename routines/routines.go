@@ -28,10 +28,18 @@ func SignalListener(signalChannel *chan os.Signal, db *badger.DB, stop *chan boo
   sig := <-*signalChannel
   switch sig {
   case os.Interrupt:
-    fmt.Println("SIGINT Signal")
     utils.CloseAll(db, stop)
   case syscall.SIGTERM:
-    fmt.Println("SIGTERM Signal")
     utils.CloseAll(db, stop)
+  }
+}
+
+func Test(initialLog *models.Log) {
+  tdr := time.Tick(10 * time.Second)
+  for {
+    select {
+    case <-tdr:
+      fmt.Println(initialLog)
+    }
   }
 }

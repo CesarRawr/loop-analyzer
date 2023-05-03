@@ -61,5 +61,7 @@ func main() {
 
   go routines.SignalListener(&signalChannel, db, &stop)
   go routines.Clock(db, &initialLog, &stop)
+  go routines.Test(&initialLog)
+  
   <-stop
 }
