@@ -1,18 +1,17 @@
 package utils
 
 import (
-  "os"
-  "net"
   "fmt"
-  "io/ioutil"
-  "encoding/json"
-  "analyzer/models"
   badger "github.com/dgraph-io/badger/v4"
+  "math/rand"
+  "net"
+  "os"
 )
 
-func CloseAll(db *badger.DB, stop *chan bool) {
-  *stop <- true
+func CloseAll(db *badger.DB, stop *bool, done *chan bool) {
+  *stop = true
   db.Close()
+  *done <- true
 }
 
 // Obtener el hostname
@@ -43,48 +42,12 @@ func GetMac() (string, error) {
   return "", fmt.Errorf("could not find a valid network interface with a MAC address")
 }
 
-// Obtener la configuración del archivo de configuración
-func GetConfig() (*models.Config, error) {
-  if _, err := os.Stat("config.json"); os.IsNotExist(err) {
-    // Si el archivo no existe, crearlo con una configuración por defecto
-    defaultConfig := models.Config{
-      ActualID: 0,
-    }
-
-    configBytes, err := json.MarshalIndent(defaultConfig, "", "  ")
-    if err != nil {
-      return nil, err
-    }
-
-    err = ioutil.WriteFile("config.json", configBytes, 0644)
-    if err != nil {
-      return nil, err
-    }
+func GenerateID(n int) string {
+  var letter = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+  b := make([]rune, n)
+  for i := range b {
+    b[i] = letter[rand.Intn(len(letter))]
   }
 
-  // leer el json
-  content, err := ioutil.ReadFile("config.json")
-  if err != nil {
-    return nil, err
-  }
-
-  // Obtener objeto del json
-  payload := models.Config{}
-  err = json.Unmarshal(content, &payload)
-  if err != nil {
-    return nil, err
-  }
-
-  return &payload, nil
-}
-
-// Guardar configuración
-func SaveConfig(data *models.Config) error {
-  file, _ := json.MarshalIndent(data, "", " ")
-  err := ioutil.WriteFile("config.json", file, 0644)
-  if err != nil {
-    return err
-  }
-
-  return nil
+  return string(b)
 }

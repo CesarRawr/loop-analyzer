@@ -1,42 +1,48 @@
 package main
 
 import (
-  "os"
-  "log"
-  "fmt"
-  "time"
-  "syscall"
-  "os/signal"
+  "analyzer/controller"
   "analyzer/models"
-  "analyzer/utils"
   "analyzer/routines"
+  "analyzer/utils"
+  "fmt"
   badger "github.com/dgraph-io/badger/v4"
+  "log"
+  "os"
+  "os/signal"
+  "syscall"
+  "time"
 )
 
 func main() {
-  stop := make(chan bool)
-  signalChannel := make(chan os.Signal, 2)
-  signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
+  var isClockStopped bool
+  done := make(chan bool)
+  logID := utils.GenerateID(25)
+  fmt.Println("pseudoID")
+  fmt.Println(logID)
 
   // Se abre la base de datos
-  db, err := badger.Open(badger.DefaultOptions("./.data"))
+  db, err := badger.Open(badger.DefaultOptions(".data"))
   if err != nil {
     log.Fatal(err)
   }
   defer db.Close()
 
-  // Se obtiene la configuración
-  config, err := utils.GetConfig()
+  // Se obtienen los datos para enviar
+  logsToSend, err := controller.GetAllLogs(db)
   if err != nil {
-    log.Fatal(err)
+    fmt.Println(err)
   }
+  fmt.Println(logsToSend)
 
-  // Actualizar ID del run actual
-  config.ActualID++
-  err = utils.SaveConfig(config);
-  if err != nil {
-    log.Fatal(err)
-  }
+  // Se crea y configura el canal para señales de interrupción
+  // para cuando sea detenido el proceso.
+  signalChannel := make(chan os.Signal, 2)
+  signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
+
+  logFile, _ := os.OpenFile("log.txt", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+  defer logFile.Close()
+  log.SetOutput(logFile)
 
   // Obtener hostname
   hostname, err := utils.GetHostname()
@@ -50,18 +56,17 @@ func main() {
     log.Fatal(err)
   }
 
-  // log unique id
-  logID := fmt.Sprintf("%d_%s", config.ActualID, *hostname)
   // Nuevo log creado
   initialLog := models.Log{
-    ID: logID,
-    MAC: mac,
+    ID:        logID,
+    PCNAME:    *hostname,
+    MAC:       mac,
     StartDate: time.Now().Format(time.RFC3339),
   }
 
-  go routines.SignalListener(&signalChannel, db, &stop)
-  go routines.Clock(db, &initialLog, &stop)
-  go routines.Test(&initialLog)
-  
-  <-stop
+  go routines.SignalListener(&signalChannel, db, &isClockStopped, &done)
+  go routines.Clock(db, &initialLog, &isClockStopped)
+  go routines.ScheduledRequest(db, &isClockStopped, &logsToSend, &logID)
+
+  <-done
 }
