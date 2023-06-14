@@ -1,8 +1,11 @@
 package utils
 
 import (
+  "analyzer/models"
+  "encoding/json"
   "fmt"
   badger "github.com/dgraph-io/badger/v4"
+  "io/ioutil"
   "math/rand"
   "net"
   "os"
@@ -50,4 +53,38 @@ func GenerateID(n int) string {
   }
 
   return string(b)
+}
+
+// Obtener la configuración del archivo de configuración
+func GetConfig() (*models.Config, error) {
+  if _, err := os.Stat("config.json"); os.IsNotExist(err) {
+    // Si el archivo no existe, crearlo con una configuración por defecto
+    defaultConfig := models.Config{
+      URL: "https://spcc-ccfe1.vercel.app/api/v1/logs",
+    }
+
+    configBytes, err := json.MarshalIndent(defaultConfig, "", "  ")
+    if err != nil {
+      return nil, err
+    }
+
+    err = ioutil.WriteFile("config.json", configBytes, 0644)
+    if err != nil {
+      return nil, err
+    }
+  }
+
+  // leer el json
+  content, err := ioutil.ReadFile("config.json")
+  if err != nil {
+    return nil, err
+  }
+
+  // Obtener objeto del json
+  payload := models.Config{}
+  err = json.Unmarshal(content, &payload)
+  if err != nil {
+    return nil, err
+  }
+  return &payload, nil
 }

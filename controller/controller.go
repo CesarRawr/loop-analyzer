@@ -113,7 +113,7 @@ func DeleteExceptOne(db *badger.DB, protectedKey *string) error {
     it := txn.NewIterator(opts)
     defer it.Close()
 
-    for it.Seek([]byte(*protectedKey)); it.ValidForPrefix([]byte("")); it.Next() {
+    for it.Rewind(); it.Valid(); it.Next() {
       item := it.Item()
       key := item.KeyCopy(nil)
 
@@ -139,9 +139,9 @@ func DeleteExceptOne(db *badger.DB, protectedKey *string) error {
   return nil
 }
 
-func SaveLogsOnDatabase(body *[]byte) error {
-  url := "http://localhost:3000/api/v1/logs"
-  resp, err := http.Post(url, "application/json", bytes.NewBuffer(*body))
+func SaveLogsOnDatabase(body *[]byte, url *string) error {
+  fmt.Println(*url)
+  resp, err := http.Post(*url, "application/json", bytes.NewBuffer(*body))
   if err != nil {
     return err
   }

@@ -18,8 +18,13 @@ func main() {
   var isClockStopped bool
   done := make(chan bool)
   logID := utils.GenerateID(25)
-  fmt.Println("pseudoID")
-  fmt.Println(logID)
+
+  config, err := utils.GetConfig()
+  if err != nil {
+    log.Fatal(err)
+  }
+
+  fmt.Println(config)
 
   // Se abre la base de datos
   db, err := badger.Open(badger.DefaultOptions(".data"))
@@ -66,7 +71,10 @@ func main() {
 
   go routines.SignalListener(&signalChannel, db, &isClockStopped, &done)
   go routines.Clock(db, &initialLog, &isClockStopped)
-  go routines.ScheduledRequest(db, &isClockStopped, &logsToSend, &logID)
+
+  if len(logsToSend) > 0 {
+    go routines.ScheduledRequest(db, &isClockStopped, &logsToSend, &logID, &config.URL)
+  }
 
   <-done
 }

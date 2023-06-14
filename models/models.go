@@ -9,5 +9,5 @@ type Log struct {
 }
 
 type Config struct {
-  ActualID int `json:"actualID"`
+  URL string `json:"url"`
 }

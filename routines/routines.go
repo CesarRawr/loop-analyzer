@@ -37,7 +37,7 @@ func SignalListener(signalChannel *chan os.Signal, db *badger.DB, stop *bool, do
   }
 }
 
-func ScheduledRequest(db *badger.DB, stop *bool, logs *[]models.Log, actualKey *string) {
+func ScheduledRequest(db *badger.DB, stop *bool, logs *[]models.Log, actualKey *string, url *string) {
   jsonData, err := json.Marshal(logs)
   if err != nil {
     fmt.Println("Error al convertir a JSON:", err)
@@ -52,13 +52,12 @@ func ScheduledRequest(db *badger.DB, stop *bool, logs *[]models.Log, actualKey *
       *stop = true
 
       // Petición para guardar los datos
-      err = controller.SaveLogsOnDatabase(&jsonData)
+      err = controller.SaveLogsOnDatabase(&jsonData, url)
       if err != nil {
         fmt.Println("No se pudo enviar los logs a la base de datos")
       }
 
       if err == nil {
-        fmt.Println("Se guardó la información correctamente")
         isDataSavedOnServer = true
         err = controller.DeleteExceptOne(db, actualKey)
         if err != nil {
@@ -67,7 +66,6 @@ func ScheduledRequest(db *badger.DB, stop *bool, logs *[]models.Log, actualKey *
       }
 
       *stop = false
-      fmt.Println("Cada minuto")
     }
   }
 }
