@@ -1,6 +1,5 @@
 # Folders
 /.data
-/.build
 
 # Files
 go.sum
